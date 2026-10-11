@@ -1,0 +1,20 @@
+[Unit]
+Description=Hakkawine Agent Daemon
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/hakkawine
+ExecStart=/opt/hakkawine/bin/hakkawine server
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput=journal
+StandardError=journal
+
+LimitNOFILE=512000
+
+[Install]
+WantedBy=multi-user.target
