@@ -1,7 +1,7 @@
 mod dispatcher;
 
 use crate::config::Config;
-use dispatcher::{Dispatcher, Frame, PendingMap};
+use dispatcher::{Dispatcher, Envelope, PendingMap};
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,7 +13,9 @@ use tokio_tungstenite::{
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-pub async fn run(token: CancellationToken, cfg: Config) {
+pub async fn run(cfg: Config) {
+    let token = CancellationToken::new();
+
     tracing::info!("Background WebSocket service started...");
 
     let connect_url = format!(
@@ -86,7 +88,7 @@ pub async fn run(token: CancellationToken, cfg: Config) {
         let _guard = sess_token.drop_guard();
 
         let (write, read) = stream.split();
-        let (tx, rx) = mpsc::channel::<Frame>(100);
+        let (tx, rx) = mpsc::channel::<Envelope>(100);
 
         let dispatcher = Dispatcher::new(sess_dispatcher, pending_requests.clone(), tx.clone());
 
@@ -145,8 +147,11 @@ pub async fn run(token: CancellationToken, cfg: Config) {
     tracing::info!("Background service has completely and safely exited.");
 }
 
-async fn run_writer<W>(sess_token: CancellationToken, mut rx: mpsc::Receiver<Frame>, mut write: W)
-where
+async fn run_writer<W>(
+    sess_token: CancellationToken,
+    mut rx: mpsc::Receiver<Envelope>,
+    mut write: W,
+) where
     W: futures_util::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin + Send,
 {
     loop {
@@ -188,7 +193,7 @@ where
                 match msg {
                     Some(Ok(msg)) if msg.is_text() || msg.is_binary() => {
                         let text = msg.to_string();
-                        if let Ok(frame) = serde_json::from_str::<Frame>(&text) {
+                        if let Ok(frame) = serde_json::from_str::<Envelope>(&text) {
                             dispatcher.dispatch(frame).await;
                         }
                     }
@@ -208,13 +213,13 @@ where
     }
 }
 
-async fn run_heartbeat(sess_token: CancellationToken, tx: mpsc::Sender<Frame>) {
+async fn run_heartbeat(sess_token: CancellationToken, tx: mpsc::Sender<Envelope>) {
     let mut interval = tokio::time::interval(Duration::from_secs(30));
     loop {
         tokio::select! {
             _ = sess_token.cancelled() => break,
             _ = interval.tick() => {
-                let heartbeat_frame = Frame {
+                let heartbeat_frame = Envelope {
                     action: "heartbeat".to_string(),
                     req_id: None,
                     code: None,
@@ -233,7 +238,7 @@ async fn run_heartbeat(sess_token: CancellationToken, tx: mpsc::Sender<Frame>) {
 
 async fn run_rpc(
     sess_token: CancellationToken,
-    tx: mpsc::Sender<Frame>,
+    tx: mpsc::Sender<Envelope>,
     pending_requests: PendingMap,
 ) {
     let mut interval = tokio::time::interval(Duration::from_secs(5));
@@ -255,7 +260,7 @@ async fn run_rpc(
                     .unwrap()
                     .as_secs();
 
-                let frame = Frame {
+                let frame = Envelope {
                     action: "report_metrics".to_string(),
                     req_id: Some(req_id.clone()),
                     code: None,

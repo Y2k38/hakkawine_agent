@@ -5,7 +5,7 @@ use tokio::sync::{Mutex, mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Frame {
+pub struct Envelope {
     pub action: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub req_id: Option<String>,
@@ -30,16 +30,20 @@ pub enum Action {
     NodeCommand,
 }
 
-pub type PendingMap = Arc<Mutex<HashMap<String, oneshot::Sender<Frame>>>>;
+pub type PendingMap = Arc<Mutex<HashMap<String, oneshot::Sender<Envelope>>>>;
 
 pub struct Dispatcher {
     pub token: CancellationToken,
     pub pending_map: PendingMap,
-    pub tx: mpsc::Sender<Frame>,
+    pub tx: mpsc::Sender<Envelope>,
 }
 
 impl Dispatcher {
-    pub fn new(token: CancellationToken, pending_map: PendingMap, tx: mpsc::Sender<Frame>) -> Self {
+    pub fn new(
+        token: CancellationToken,
+        pending_map: PendingMap,
+        tx: mpsc::Sender<Envelope>,
+    ) -> Self {
         Self {
             token,
             pending_map,
@@ -47,7 +51,7 @@ impl Dispatcher {
         }
     }
 
-    pub async fn dispatch(&self, frame: Frame) {
+    pub async fn dispatch(&self, frame: Envelope) {
         if frame.action == "ack" {
             if let Some(req_id) = &frame.req_id {
                 let mut map = self.pending_map.lock().await;
@@ -68,12 +72,12 @@ impl Dispatcher {
         }
     }
 
-    async fn handle_server_command(&self, frame: Frame) {
+    async fn handle_server_command(&self, frame: Envelope) {
         tracing::info!(
             payload = ?frame.payload,
             "Received server command"
         );
-        let ack_frame = Frame {
+        let ack_frame = Envelope {
             action: "ack".to_string(),
             req_id: frame.req_id,
             code: Some("Ok".to_string()),

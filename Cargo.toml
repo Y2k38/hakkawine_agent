@@ -1,24 +1,32 @@
-[package]
-name = "hakkawine_agent"
-version = "0.1.0"
+[workspace]
+resolver = "2"
+members = [
+    "agent",
+    "ebpf",
+    "agent",
+]
+
+default-members = ["agent", "common"]
+
+[workspace.package]
+license = "Apache-2.0"
 edition = "2024"
 
-[dependencies]
-axum = "0.8.9"
-clap = { version = "4.6.7", features = ["derive"] }
-dotenvy = "0.15.7"
-envy = "0.4.2"
-futures-util = "0.3.34"
-rand = "0.10.3"
-reqwest = "0.13.5"
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
-serde_yaml = "0.9.34"
-sqlx = "0.9.0"
-thiserror = "2.0.21"
-tokio = { version = "1.53.1", features = ["full"] }
-tokio-tungstenite = "0.30.0"
-tokio-util = "0.7.19"
-tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-uuid = { version = "1.28.0", features = ["v4", "serde"] }
+[workspace.dependencies]
+aya = { version = "0.14.0", default-features = false }
+aya-build = { version = "0.2.0", default-features = false }
+aya-ebpf = { version = "0.2.1", default-features = false }
+aya-log = { version = "0.3.0", default-features = false }
+aya-log-ebpf = { version = "0.2.0", default-features = false }
+
+anyhow = { version = "1", default-features = false }
+cargo_metadata = { version = "0.23.0", default-features = false }
+clap = { version = "4.5.20", default-features = false, features = ["std"] }
+libc = { version = "0.2.159", default-features = false }
+tokio = { version = "1.53.3", default-features = false }
+which = { version = "6.0.0", default-features = false }
+
+[profile.release.package.ebpf]
+debug = 2
+codegen-units = 1
+strip = false

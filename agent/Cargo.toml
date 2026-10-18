@@ -1,0 +1,48 @@
+[package]
+name = "agent"
+version = "0.1.0"
+edition.workspace = true
+
+license.workspace = true
+
+[dependencies]
+common = { path = "../common", features = ["user"] }
+ebpf = { path = "../ebpf" }
+
+axum = "0.8.9"
+anyhow = { workspace = true, default-features = true }
+aya = { workspace = true }
+aya-log = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+dotenvy = "0.15.7"
+envy = "0.4.2"
+futures-util = "0.3.34"
+rand = "0.10.3"
+reqwest = "0.13.5"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+serde_yaml = "0.9.34"
+sqlx = "0.9.0"
+thiserror = "2.0.21"
+libc = { workspace = true }
+tokio = { workspace = true, features = [
+    "macros",
+    "rt",
+    "rt-multi-thread",
+    "net",
+    "signal",
+] }
+tokio-tungstenite = "0.30.0"
+tokio-util = "0.7.19"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+uuid = { version = "1.28.0", features = ["v4", "serde"] }
+
+[build-dependencies]
+anyhow = { workspace = true }
+aya-build = { workspace = true }
+cargo_metadata = { workspace = true }
+
+[[bin]]
+name = "hakkawine"
+path = "src/main.rs"
